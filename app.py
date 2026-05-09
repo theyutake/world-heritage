@@ -361,6 +361,35 @@ def get_supabase() -> Client:
 
 supabase = get_supabase()
 
+# ─── キャッシュクエリ（5分TTL） ──────────────────────────────────
+@st.cache_data(ttl=300)
+def fetch_all_heritage():
+    res = get_supabase().table("heritage").select(
+        "id,name_en,name_ja,category,states_name_en,date_inscribed,region_en,danger"
+    ).limit(1200).execute()
+    return res.data or []
+
+@st.cache_data(ttl=300)
+def fetch_heritage_total_count():
+    return get_supabase().table("heritage").select("id", count="exact").execute().count or 0
+
+@st.cache_data(ttl=300)
+def fetch_heritage_list(region, category, kw):
+    q = get_supabase().table("heritage").select(
+        "id,name_en,name_ja,category,states_name_en,region_en,date_inscribed,danger,criteria_txt"
+    ).order("date_inscribed")
+    if region:
+        q = q.eq("region_en", region)
+    if category:
+        q = q.eq("category", category)
+    if kw:
+        q = q.or_(f"name_ja.ilike.%{kw}%,name_en.ilike.%{kw}%,states_name_en.ilike.%{kw}%")
+    return q.limit(200).execute().data
+
+@st.cache_data(ttl=300)
+def fetch_heritage_detail(hid):
+    return get_supabase().table("heritage").select("*").eq("id", hid).single().execute().data
+
 # ─── セッション ───────────────────────────────────────────────────
 def init_session():
     defaults = {
@@ -395,10 +424,7 @@ def screen_header(title, icons_html=""):
 def page_home():
     screen_header("Home", f'<div class="h-icon">{BELL_SVG}</div>')
 
-    res = supabase.table("heritage").select(
-        "id,name_en,name_ja,category,states_name_en,date_inscribed,region_en,danger"
-    ).limit(1200).execute()
-    all_h = res.data or []
+    all_h = fetch_all_heritage()
 
     day_seed = __import__("datetime").date.today().toordinal()
     if all_h:
@@ -503,7 +529,7 @@ def page_home():
 def page_list():
     screen_header("Sites", f'<div class="h-icon">{SEARCH_SVG}</div><div class="h-icon">{FILTER_SVG}</div>')
 
-    total_cnt = supabase.table("heritage").select("id", count="exact").execute().count or 0
+    total_cnt = fetch_heritage_total_count()
     st.markdown(
         f'<div class="chip"><div class="chip-dot"></div>World Heritage · {total_cnt} Sites</div>',
         unsafe_allow_html=True,
@@ -552,16 +578,11 @@ def page_list():
     kw = st.text_input("", placeholder="遺産名・国名で検索…",
                        label_visibility="collapsed", key="search_input").strip()
 
-    query = supabase.table("heritage").select(
-        "id,name_en,name_ja,category,states_name_en,region_en,date_inscribed,danger,criteria_txt"
-    ).order("date_inscribed")
-    if region_sel != "すべて":
-        query = query.eq("region_en", region_sel)
-    if cat_sel != "すべて":
-        query = query.eq("category", cat_sel)
-    if kw:
-        query = query.or_(f"name_ja.ilike.%{kw}%,name_en.ilike.%{kw}%,states_name_en.ilike.%{kw}%")
-    rows = query.limit(200).execute().data
+    rows = fetch_heritage_list(
+        region_sel if region_sel != "すべて" else None,
+        cat_sel if cat_sel != "すべて" else None,
+        kw,
+    )
 
     st.markdown(
         f'<p style="font-size:12px;color:{C_SUB};margin:0 0 10px">'
@@ -608,7 +629,7 @@ def page_list():
 # ─── 詳細 ────────────────────────────────────────────────────────
 def page_detail():
     hid = st.session_state.selected_id
-    h   = supabase.table("heritage").select("*").eq("id", hid).single().execute().data
+    h   = fetch_heritage_detail(hid)
 
     if st.button("← 戻る", key="back"):
         st.session_state.tab = st.session_state.get("detail_from", "list")
@@ -899,11 +920,12 @@ def bottom_nav():
         cls = "n-item on" if active else "n-item"
         nav_items += f'<div class="{cls}">{nav_svg(tab_key, active)}<span>{label}</span></div>'
 
-    # .bnav は position:fixed で st.bottom の外に独立描画
+    # .bnav は position:fixed で独立描画
     st.markdown(f'<div class="bnav">{nav_items}</div>', unsafe_allow_html=True)
 
-    # 透明ボタンは st.bottom に配置（クリック処理用）
-    with st.bottom:
+    # 透明ボタン：st.bottom が使える環境はそちら、ない場合は通常コンテナ
+    nav_ctx = st.bottom if hasattr(st, "bottom") else st.container()
+    with nav_ctx:
         cols = st.columns(4)
         for col, (tab_key, label) in zip(cols, tabs):
             if col.button("　", key=f"nav_{tab_key}", help=label, use_container_width=True):
