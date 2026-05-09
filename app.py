@@ -266,26 +266,19 @@ def inject_css():
     /* ── タブ ── */
     div[data-testid="stTabs"] button[role="tab"] {{ color: {C_TEXT} !important; }}
     div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{ color: {C_ACTIVE} !important; }}
-    /* ── Bottom nav：HTML nav + position:absolute オーバーレイ方式 ── */
-    div[data-testid="stBottom"] > div {{
-        position: relative !important;
-        padding: 0 !important;
-        height: 68px !important;
-        max-width: 480px;
-        margin: 0 auto;
-        overflow: hidden;
-    }}
-    /* HTML ナビ（見た目レイヤー, z-index:1） */
+    /* ── Bottom nav：position:fixed で独立描画 ── */
     .bnav {{
-        position: absolute;
-        top: 0; left: 0; right: 0;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
         height: 68px;
         background: #fff;
         border-top: 1px solid #EDF2F8;
         box-shadow: 0 -2px 16px rgba(0,50,130,0.08);
         display: flex; align-items: center; justify-content: space-around;
         padding: 0 4px 10px;
-        z-index: 1;
+        z-index: 1000;
+        max-width: 480px;
+        margin: 0 auto;
     }}
     .n-item {{
         display: flex; flex-direction: column; align-items: center; gap: 3px;
@@ -293,14 +286,15 @@ def inject_css():
         min-width: 56px;
     }}
     .n-item.on {{ color: {C_ACTIVE}; }}
-    /* ボタンレイヤー（クリック用, z-index:20）を nav 上に重ねる */
+    /* st.bottom のボタン（クリック用透明レイヤー） */
+    div[data-testid="stBottom"] > div {{
+        padding: 0 !important; height: 68px !important;
+        background: transparent !important;
+    }}
     div[data-testid="stBottom"] [data-testid="stHorizontalBlock"],
     div[data-testid="stBottom"] [data-testid="stColumns"] {{
-        position: absolute !important;
-        top: 0 !important; left: 0 !important; right: 0 !important;
-        height: 68px !important;
-        z-index: 20 !important;
-        gap: 0 !important; padding: 0 !important; margin: 0 !important;
+        height: 68px !important; gap: 0 !important;
+        padding: 0 !important; margin: 0 !important;
         background: transparent !important;
     }}
     div[data-testid="stBottom"] [data-testid="stColumn"],
@@ -313,25 +307,19 @@ def inject_css():
         margin: 0 !important; padding: 0 !important; height: 68px !important;
         background: transparent !important;
     }}
-    div[data-testid="stBottom"] [data-testid="stButton"] {{
-        background: transparent !important;
-    }}
+    div[data-testid="stBottom"] [data-testid="stButton"],
     div[data-testid="stBottom"] [data-testid="stButton"] > button {{
         background: transparent !important;
         border: none !important; border-radius: 0 !important;
-        box-shadow: none !important;
-        color: transparent !important;
-        height: 68px !important; width: 100% !important;
-        padding: 0 !important; margin: 0 !important;
-        cursor: pointer !important;
-        opacity: 0 !important;
+        box-shadow: none !important; color: transparent !important;
+        opacity: 0 !important; height: 68px !important; width: 100% !important;
+        padding: 0 !important; margin: 0 !important; cursor: pointer !important;
     }}
     div[data-testid="stBottom"] [data-testid="stButton"] > button:hover,
     div[data-testid="stBottom"] [data-testid="stButton"] > button:focus,
     div[data-testid="stBottom"] [data-testid="stButton"] > button:active {{
-        background: transparent !important;
-        border: none !important; box-shadow: none !important;
-        opacity: 0 !important;
+        background: transparent !important; border: none !important;
+        box-shadow: none !important; opacity: 0 !important;
     }}
     /* ── Overlay buttons on cards ── */
     div.element-container:has(div.region-card) {{ margin-bottom: 0 !important; }}
@@ -911,8 +899,11 @@ def bottom_nav():
         cls = "n-item on" if active else "n-item"
         nav_items += f'<div class="{cls}">{nav_svg(tab_key, active)}<span>{label}</span></div>'
 
+    # .bnav は position:fixed で st.bottom の外に独立描画
+    st.markdown(f'<div class="bnav">{nav_items}</div>', unsafe_allow_html=True)
+
+    # 透明ボタンは st.bottom に配置（クリック処理用）
     with st.bottom:
-        st.markdown(f'<div class="bnav">{nav_items}</div>', unsafe_allow_html=True)
         cols = st.columns(4)
         for col, (tab_key, label) in zip(cols, tabs):
             if col.button("　", key=f"nav_{tab_key}", help=label, use_container_width=True):
