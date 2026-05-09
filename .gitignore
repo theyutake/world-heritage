@@ -6,3 +6,9 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.streamlit/secrets.toml
+wikidata_ja.json
+heritage.csv
+supabase_seed.sql
+generate_seed.py
+export_csv.py
