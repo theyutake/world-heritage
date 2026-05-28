@@ -221,6 +221,8 @@ def inject_css():
     div[data-testid="stTextInput"] > div > div {{
         background: transparent !important;
         box-shadow: none !important;
+        border: none !important;
+        outline: none !important;
     }}
     div[data-testid="stTextInput"] input {{
         background: #fff !important;
@@ -277,27 +279,32 @@ def inject_css():
         max-width: 480px !important;
         margin: 0 auto !important;
     }}
-    /* nav-item-wrap: アイコン＋ラベルの見た目 */
-    .nav-item-wrap {{
-        display: flex; flex-direction: column; align-items: center;
-        justify-content: center; gap: 3px;
-        height: 62px; padding-top: 8px;
-        font-size: 9px; font-weight: 700; color: {C_INACTIVE};
+    /* bnav-inner: 見た目のナビバー */
+    .bnav-inner {{
+        display: flex; align-items: flex-start; justify-content: space-around;
+        padding-top: 8px; height: 62px;
     }}
-    .nav-item-wrap.on {{ color: {C_ACTIVE}; }}
-    .nav-item-wrap svg {{ stroke: {C_INACTIVE}; }}
-    .nav-item-wrap.on svg {{ stroke: {C_ACTIVE}; }}
-    /* nav-item-wrap の直後ボタンを透明オーバーレイ */
-    div.element-container:has(div.nav-item-wrap) {{ margin-bottom: 0 !important; }}
-    div.element-container:has(div.nav-item-wrap) + div.element-container {{
+    .nav-item {{
+        display: flex; flex-direction: column; align-items: center; gap: 3px;
+        font-size: 9px; font-weight: 700; color: {C_INACTIVE};
+        min-width: 56px; flex: 1;
+    }}
+    .nav-item.on {{ color: {C_ACTIVE}; }}
+    .nav-item svg {{ stroke: {C_INACTIVE}; }}
+    .nav-item.on svg {{ stroke: {C_ACTIVE}; }}
+    /* bnav-inner の直後 element-container（st.columns）を上に重ねる */
+    div.element-container:has(div.bnav-inner) {{ margin-bottom: 0 !important; }}
+    div.element-container:has(div.bnav-inner) + div.element-container {{
         margin-top: -62px !important; height: 62px !important;
         position: relative; z-index: 10;
     }}
-    div.element-container:has(div.nav-item-wrap) + div.element-container button {{
+    /* st.columns 内の各ボタンを透明オーバーレイ */
+    div.element-container:has(div.bnav-inner) + div.element-container button {{
         height: 62px !important; width: 100% !important;
         opacity: 0 !important; cursor: pointer !important;
         border: none !important; background: transparent !important;
         padding: 0 !important; box-shadow: none !important;
+        border-radius: 0 !important;
     }}
     /* ── Overlay buttons on cards ── */
     div.element-container:has(div.region-card) {{ margin-bottom: 0 !important; }}
@@ -501,6 +508,8 @@ def page_home():
         region_counts[r] = region_counts.get(r, 0) + 1
 
     for r_en, cnt in sorted(region_counts.items(), key=lambda x: -x[1]):
+        if r_en not in REGION_LABELS:
+            continue
         label = REGION_LABELS.get(r_en, r_en)
         em    = REGION_EMOJI.get(r_en, "🌍")
         grad  = REGION_GRAD.get(r_en, f"linear-gradient(135deg,{C_ACTIVE},{C_DARK})")
@@ -831,18 +840,23 @@ def bottom_nav():
                     f'<line x1="12" y1="20" x2="12" y2="4"/>'
                     f'<line x1="6" y1="20" x2="6" y2="14"/></svg>')
 
+    # 見た目ナビ（1つのmarkdownで全4タブ）
+    nav_items_html = ""
+    for tab_key, label in tabs:
+        active = current == tab_key or (tab_key == "list" and current == "detail")
+        cls = "on" if active else ""
+        nav_items_html += (
+            f'<div class="nav-item {cls}">{nav_svg(tab_key)}'
+            f'<span>{label}</span></div>'
+        )
+
     nav_ctx = st.bottom if hasattr(st, "bottom") else st.container()
     with nav_ctx:
+        st.markdown(f'<div class="bnav-inner">{nav_items_html}</div>', unsafe_allow_html=True)
+        # 透明ボタン行（st.columnsが bnav-inner の直後に来る）
         cols = st.columns(4)
         for col, (tab_key, label) in zip(cols, tabs):
-            active = current == tab_key or (tab_key == "list" and current == "detail")
-            cls = "on" if active else ""
             with col:
-                st.markdown(
-                    f'<div class="nav-item-wrap {cls}">{nav_svg(tab_key)}'
-                    f'<span>{label}</span></div>',
-                    unsafe_allow_html=True,
-                )
                 if st.button("　", key=f"nav_{tab_key}", use_container_width=True):
                     st.session_state.tab = tab_key
                     st.rerun()
