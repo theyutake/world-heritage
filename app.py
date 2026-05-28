@@ -266,60 +266,38 @@ def inject_css():
     /* ── タブ ── */
     div[data-testid="stTabs"] button[role="tab"] {{ color: {C_TEXT} !important; }}
     div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{ color: {C_ACTIVE} !important; }}
-    /* ── Bottom nav：position:fixed で独立描画 ── */
-    .bnav {{
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-        height: 68px;
-        background: #fff;
-        border-top: 1px solid #EDF2F8;
-        box-shadow: 0 -2px 16px rgba(0,50,130,0.08);
-        display: flex; align-items: center; justify-content: space-around;
-        padding: 0 4px 10px;
-        z-index: 1000;
-        max-width: 480px;
-        margin: 0 auto;
+    /* ── Bottom nav (st.bottom内部) ── */
+    [data-testid="stBottom"] {{
+        background: #fff !important;
+        border-top: 1px solid #EDF2F8 !important;
+        box-shadow: 0 -2px 16px rgba(0,50,130,0.08) !important;
     }}
-    .n-item {{
-        display: flex; flex-direction: column; align-items: center; gap: 3px;
+    [data-testid="stBottom"] > div {{
+        padding: 0 !important;
+        max-width: 480px !important;
+        margin: 0 auto !important;
+    }}
+    /* nav-item-wrap: アイコン＋ラベルの見た目 */
+    .nav-item-wrap {{
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 3px;
+        height: 62px; padding-top: 8px;
         font-size: 9px; font-weight: 700; color: {C_INACTIVE};
-        min-width: 56px;
     }}
-    .n-item.on {{ color: {C_ACTIVE}; }}
-    /* st.bottom のボタン（クリック用透明レイヤー） */
-    div[data-testid="stBottom"] > div {{
-        padding: 0 !important; height: 68px !important;
-        background: transparent !important;
+    .nav-item-wrap.on {{ color: {C_ACTIVE}; }}
+    .nav-item-wrap svg {{ stroke: {C_INACTIVE}; }}
+    .nav-item-wrap.on svg {{ stroke: {C_ACTIVE}; }}
+    /* nav-item-wrap の直後ボタンを透明オーバーレイ */
+    div.element-container:has(div.nav-item-wrap) {{ margin-bottom: 0 !important; }}
+    div.element-container:has(div.nav-item-wrap) + div.element-container {{
+        margin-top: -62px !important; height: 62px !important;
+        position: relative; z-index: 10;
     }}
-    div[data-testid="stBottom"] [data-testid="stHorizontalBlock"],
-    div[data-testid="stBottom"] [data-testid="stColumns"] {{
-        height: 68px !important; gap: 0 !important;
-        padding: 0 !important; margin: 0 !important;
-        background: transparent !important;
-    }}
-    div[data-testid="stBottom"] [data-testid="stColumn"],
-    div[data-testid="stBottom"] [data-testid="stVerticalBlock"] {{
-        padding: 0 !important; gap: 0 !important;
-        min-width: 0 !important; height: 68px !important;
-        background: transparent !important;
-    }}
-    div[data-testid="stBottom"] .element-container {{
-        margin: 0 !important; padding: 0 !important; height: 68px !important;
-        background: transparent !important;
-    }}
-    div[data-testid="stBottom"] [data-testid="stButton"],
-    div[data-testid="stBottom"] [data-testid="stButton"] > button {{
-        background: transparent !important;
-        border: none !important; border-radius: 0 !important;
-        box-shadow: none !important; color: transparent !important;
-        opacity: 0 !important; height: 68px !important; width: 100% !important;
-        padding: 0 !important; margin: 0 !important; cursor: pointer !important;
-    }}
-    div[data-testid="stBottom"] [data-testid="stButton"] > button:hover,
-    div[data-testid="stBottom"] [data-testid="stButton"] > button:focus,
-    div[data-testid="stBottom"] [data-testid="stButton"] > button:active {{
-        background: transparent !important; border: none !important;
-        box-shadow: none !important; opacity: 0 !important;
+    div.element-container:has(div.nav-item-wrap) + div.element-container button {{
+        height: 62px !important; width: 100% !important;
+        opacity: 0 !important; cursor: pointer !important;
+        border: none !important; background: transparent !important;
+        padding: 0 !important; box-shadow: none !important;
     }}
     /* ── Overlay buttons on cards ── */
     div.element-container:has(div.region-card) {{ margin-bottom: 0 !important; }}
@@ -415,9 +393,16 @@ init_session()
 def disp(row):
     return row.get("name_ja") or row.get("name_en", "")
 
-SEARCH_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#5C7A98" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>'
-BELL_SVG   = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#5C7A98" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>'
-FILTER_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#5C7A98" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/></svg>'
+SEARCH_SVG  = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#5C7A98" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>'
+BELL_SVG    = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#5C7A98" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>'
+FILTER_SVG  = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#5C7A98" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/></svg>'
+PIN_SVG     = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
+CAL_SVG     = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
+TAG_SVG     = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>'
+AREA_SVG    = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>'
+STAR_SVG    = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+TARGET_SVG  = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>'
+TEMPLE_SVG  = '<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="20" width="20" height="2"/><rect x="4" y="11" width="2" height="9"/><rect x="11" y="11" width="2" height="9"/><rect x="18" y="11" width="2" height="9"/><path d="M12 3L2 9h20z"/></svg>'
 
 def screen_header(title, icons_html=""):
     st.markdown(
@@ -668,17 +653,17 @@ def page_detail():
     )
 
     area_part = (
-        f'<div style="font-size:12px;color:{C_SUB};margin-bottom:4px">📐 {h["area_hectares"]} ha</div>'
+        f'<div style="font-size:12px;color:{C_SUB};margin-bottom:4px;display:flex;align-items:center;gap:5px">{AREA_SVG} {h["area_hectares"]} ha</div>'
         if h.get("area_hectares") else ""
     )
     crit_part = (
-        f'<div style="font-size:12px;color:{C_SUB}">🏷️ {h["criteria_txt"]}</div>'
+        f'<div style="font-size:12px;color:{C_SUB};display:flex;align-items:center;gap:5px">{TAG_SVG} {h["criteria_txt"]}</div>'
         if h.get("criteria_txt") else ""
     )
     st.markdown(
         f'<div style="background:white;border-radius:18px;padding:14px 16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(0,50,130,0.07)">'
-        f'<div style="font-size:12px;color:{C_SUB};margin-bottom:4px">🌐 {h.get("states_name_en","")} · {r_label}</div>'
-        f'<div style="font-size:12px;color:{C_SUB};margin-bottom:4px">📅 {h.get("date_inscribed","")}年 UNESCO登録</div>'
+        f'<div style="font-size:12px;color:{C_SUB};margin-bottom:4px;display:flex;align-items:center;gap:5px">{PIN_SVG} {h.get("states_name_en","")} · {r_label}</div>'
+        f'<div style="font-size:12px;color:{C_SUB};margin-bottom:4px;display:flex;align-items:center;gap:5px">{CAL_SVG} {h.get("date_inscribed","")}年 UNESCO登録</div>'
         f'{area_part}{crit_part}</div>',
         unsafe_allow_html=True,
     )
@@ -794,14 +779,14 @@ def page_stats():
     st.markdown(
         f'<div style="background:linear-gradient(135deg,{C_ACTIVE},{C_DARK});border-radius:20px;padding:24px;'
         f'margin-bottom:14px;text-align:center;color:white;box-shadow:0 4px 20px rgba(0,58,154,0.28)">'
-        f'<div style="font-size:48px;margin-bottom:8px">🏛️</div>'
+        f'<div style="margin-bottom:8px;opacity:0.9">{TEMPLE_SVG}</div>'
         f'<div style="font-size:22px;font-weight:800;margin-bottom:4px">{level_name}</div>'
         f'<div style="font-size:13px;opacity:0.8">Lv.{level} · {score} XP</div></div>',
         unsafe_allow_html=True,
     )
     st.markdown(
         f'<div class="lvl-card">'
-        f'<div class="lvl-icon">⭐</div>'
+        f'<div class="lvl-icon" style="display:flex;align-items:center;justify-content:center">{STAR_SVG}</div>'
         f'<div style="flex:1"><div class="lvl-name">クイズ正解率</div>'
         f'<div class="lvl-track"><div class="lvl-fill" style="width:{int(score/max(count,1)*100)}%"></div></div></div>'
         f'<div class="lvl-badge">{score}/{max(count,1)}</div></div>',
@@ -809,7 +794,7 @@ def page_stats():
     )
     st.markdown(
         f'<div class="lvl-card">'
-        f'<div class="lvl-icon">🎯</div>'
+        f'<div class="lvl-icon" style="display:flex;align-items:center;justify-content:center">{TARGET_SVG}</div>'
         f'<div style="flex:1"><div class="lvl-name">次のレベルまで</div>'
         f'<div class="lvl-track"><div class="lvl-fill" style="width:{fill_pct}%"></div></div></div>'
         f'<div class="lvl-badge">{5 - score % 5} 問</div></div>',
@@ -820,51 +805,47 @@ def page_stats():
         st.session_state.quiz_count = 0
         st.rerun()
 
-# ─── ボトムナビ（HTML nav + 透明ボタンオーバーレイ） ────────────────
+# ─── ボトムナビ ──────────────────────────────────────────────────
 def bottom_nav():
     current = st.session_state.tab
-    is_list = current in ("list", "detail")
+    tabs = [("home", "Home"), ("list", "Sites"), ("quiz", "Quiz"), ("stats", "Stats")]
 
-    def nav_svg(tab_key, active):
-        color = C_ACTIVE if active else C_INACTIVE
+    def nav_svg(tab_key):
+        s = 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'
         if tab_key == "home":
-            return (f'<svg viewBox="0 0 24 24" width="22" height="22" fill="{color}">'
-                    f'<path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>')
+            return (f'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" {s}>'
+                    f'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'
+                    f'<polyline points="9 22 9 12 15 12 15 22"/></svg>')
         elif tab_key == "list":
-            return (f'<svg viewBox="0 0 24 24" width="22" height="22" fill="{color}">'
-                    f'<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13'
-                    f'c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5'
-                    f' 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>')
+            return (f'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" {s}>'
+                    f'<circle cx="11" cy="11" r="8"/>'
+                    f'<line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>')
         elif tab_key == "quiz":
-            return (f'<svg viewBox="0 0 24 24" width="22" height="22" fill="none"'
-                    f' stroke="{color}" stroke-width="2" stroke-linecap="round">'
+            return (f'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" {s}>'
                     f'<circle cx="12" cy="12" r="10"/>'
                     f'<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>'
                     f'<line x1="12" y1="17" x2="12.01" y2="17"/></svg>')
         else:
-            return (f'<svg viewBox="0 0 24 24" width="22" height="22" fill="none"'
-                    f' stroke="{color}" stroke-width="1.8">'
-                    f'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>')
+            return (f'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" {s}>'
+                    f'<line x1="18" y1="20" x2="18" y2="10"/>'
+                    f'<line x1="12" y1="20" x2="12" y2="4"/>'
+                    f'<line x1="6" y1="20" x2="6" y2="14"/></svg>')
 
-    tabs = [("home", "Home"), ("list", "Sites"), ("quiz", "Quiz"), ("stats", "Stats")]
-    nav_items = ""
-    for tab_key, label in tabs:
-        active = (current == tab_key) or (tab_key == "list" and is_list)
-        cls = "n-item on" if active else "n-item"
-        nav_items += f'<div class="{cls}">{nav_svg(tab_key, active)}<span>{label}</span></div>'
-
-    # .bnav は position:fixed で独立描画
-    st.markdown(f'<div class="bnav">{nav_items}</div>', unsafe_allow_html=True)
-
-    # 透明ボタン：st.bottom が使える環境はそちら、ない場合は通常コンテナ
     nav_ctx = st.bottom if hasattr(st, "bottom") else st.container()
     with nav_ctx:
         cols = st.columns(4)
         for col, (tab_key, label) in zip(cols, tabs):
-            if col.button("　", key=f"nav_{tab_key}", help=label, use_container_width=True):
-                st.session_state.tab = tab_key
-                st.session_state.show_search = False
-                st.rerun()
+            active = current == tab_key or (tab_key == "list" and current == "detail")
+            cls = "on" if active else ""
+            with col:
+                st.markdown(
+                    f'<div class="nav-item-wrap {cls}">{nav_svg(tab_key)}'
+                    f'<span>{label}</span></div>',
+                    unsafe_allow_html=True,
+                )
+                if st.button("　", key=f"nav_{tab_key}", use_container_width=True):
+                    st.session_state.tab = tab_key
+                    st.rerun()
 
 # ─── ルーティング ────────────────────────────────────────────────
 inject_css()
