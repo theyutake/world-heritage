@@ -218,7 +218,9 @@ def inject_css():
     }}
     /* ── フォーム要素リセット ── */
     div[data-testid="stTextInput"] > div,
-    div[data-testid="stTextInput"] > div > div {{
+    div[data-testid="stTextInput"] > div > div,
+    div[data-testid="stTextInput"] [data-baseweb="input"],
+    div[data-testid="stTextInput"] [data-baseweb="base-input"] {{
         background: transparent !important;
         box-shadow: none !important;
         border: none !important;
@@ -292,16 +294,17 @@ def inject_css():
     .nav-item.on {{ color: {C_ACTIVE}; }}
     .nav-item svg {{ stroke: {C_INACTIVE}; }}
     .nav-item.on svg {{ stroke: {C_ACTIVE}; }}
-    /* bnav-inner の直後 element-container（st.columns）を上に重ねる */
-    div.element-container:has(div.bnav-inner) {{ margin-bottom: 0 !important; }}
-    div.element-container:has(div.bnav-inner) + div.element-container {{
-        margin-top: -62px !important; height: 62px !important;
+    /* stBottom内のst.columns（stHorizontalBlock）を直接ターゲット */
+    [data-testid="stBottom"] [data-testid="stHorizontalBlock"] {{
+        margin-top: -62px !important;
         position: relative; z-index: 10;
+        height: 62px !important;
     }}
-    /* st.columns 内の各ボタンを透明オーバーレイ */
-    div.element-container:has(div.bnav-inner) + div.element-container button {{
+    /* 透明ボタンオーバーレイ */
+    [data-testid="stBottom"] [data-testid="stButton"] button {{
+        opacity: 0 !important;
         height: 62px !important; width: 100% !important;
-        opacity: 0 !important; cursor: pointer !important;
+        cursor: pointer !important;
         border: none !important; background: transparent !important;
         padding: 0 !important; box-shadow: none !important;
         border-radius: 0 !important;
