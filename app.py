@@ -2,6 +2,7 @@ import os
 import random
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="世界遺産",
@@ -291,33 +292,6 @@ def inject_css():
     .n-item.on {{ color: {C_ACTIVE}; }}
     .n-item svg {{ stroke: {C_INACTIVE}; }}
     .n-item.on svg {{ stroke: {C_ACTIVE}; }}
-    /* ── Bottom nav：クリック層（st.bottom = 完全透明） ── */
-    [data-testid="stBottom"] {{
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-    }}
-    [data-testid="stBottom"] > div {{
-        padding: 0 !important;
-        height: 68px !important;
-        max-width: 480px !important;
-        margin: 0 auto !important;
-    }}
-    [data-testid="stBottom"] [data-testid="stHorizontalBlock"],
-    [data-testid="stBottom"] [data-testid="stColumn"] {{
-        padding: 0 !important; gap: 0 !important; height: 68px !important;
-    }}
-    [data-testid="stBottom"] .element-container,
-    [data-testid="stBottom"] [data-testid="stButton"] {{
-        height: 68px !important; margin: 0 !important; padding: 0 !important;
-    }}
-    [data-testid="stBottom"] [data-testid="stButton"] button {{
-        opacity: 0 !important;
-        height: 68px !important; width: 100% !important;
-        background: transparent !important; border: none !important;
-        box-shadow: none !important; cursor: pointer !important;
-        padding: 0 !important; border-radius: 0 !important;
-    }}
     /* ── Overlay buttons on cards ── */
     div.element-container:has(div.region-card) {{ margin-bottom: 0 !important; }}
     div.element-container:has(div.region-card) + div.element-container {{
@@ -860,14 +834,44 @@ def bottom_nav():
         nav_items_html += f'<div class="n-item {cls}">{nav_svg(tab_key)}<span>{label}</span></div>'
     st.markdown(f'<div class="bnav">{nav_items_html}</div>', unsafe_allow_html=True)
 
-    # クリック層（st.bottom = Streamlitがfixed配置・透明ボタンのみ）
-    with st.bottom():
-        cols = st.columns(4)
-        for col, (tab_key, label) in zip(cols, tabs):
-            with col:
-                if st.button("　", key=f"nav_{tab_key}", use_container_width=True):
-                    st.session_state.tab = tab_key
-                    st.rerun()
+    # クリック層（メインフロー通常columns → JSでposition:fixed+透明に変換）
+    cols = st.columns(4)
+    for col, (tab_key, label) in zip(cols, tabs):
+        with col:
+            if st.button("　", key=f"nav_{tab_key}", use_container_width=True):
+                st.session_state.tab = tab_key
+                st.rerun()
+
+    components.html("""
+<script>
+(function() {
+    function fixNavButtons() {
+        var p = window.parent.document;
+        var blocks = p.querySelectorAll('[data-testid="stHorizontalBlock"]');
+        if (!blocks.length) return;
+        var nav = blocks[blocks.length - 1];
+        nav.style.cssText = [
+            'position:fixed!important',
+            'bottom:0!important',
+            'left:0!important',
+            'right:0!important',
+            'height:68px!important',
+            'z-index:1000!important',
+            'opacity:0!important',
+            'max-width:480px!important',
+            'margin:0 auto!important',
+            'pointer-events:all!important'
+        ].join(';');
+        nav.querySelectorAll('button').forEach(function(btn){
+            btn.style.cssText = 'height:68px!important;width:100%!important;opacity:0!important;cursor:pointer!important;border:none!important;background:transparent!important;padding:0!important';
+        });
+    }
+    var observer = new MutationObserver(fixNavButtons);
+    observer.observe(window.parent.document.body, {childList:true, subtree:true});
+    fixNavButtons();
+})();
+</script>
+""", height=0)
 
 # ─── ルーティング ────────────────────────────────────────────────
 inject_css()
