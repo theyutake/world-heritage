@@ -1,7 +1,7 @@
 import os
 import random
+import pandas as pd
 import streamlit as st
-from supabase import create_client, Client
 
 st.set_page_config(
     page_title="世界遺産",
@@ -352,48 +352,54 @@ def inject_css():
     </style>
     """, unsafe_allow_html=True)
 
-# ─── Supabase ─────────────────────────────────────────────────────
-@st.cache_resource
-def get_supabase() -> Client:
-    url = os.environ.get("SUPABASE_URL") or st.secrets["SUPABASE_URL"]
-    key = os.environ.get("SUPABASE_KEY") or st.secrets["SUPABASE_KEY"]
-    return create_client(url, key)
+# ─── データ読み込み（CSV） ──────────────────────────────────────
+@st.cache_data
+def load_heritage_df():
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "heritage.csv")
+    df = pd.read_csv(path)
+    # unique_number を id として使用（Supabase の auto-increment id の代替）
+    if "id" not in df.columns:
+        df["id"] = df["unique_number"]
+    if "danger" in df.columns:
+        df["danger"] = df["danger"].fillna(False).astype(bool)
+    return df
 
-supabase = get_supabase()
-
-# ─── キャッシュクエリ（5分TTL） ──────────────────────────────────
-@st.cache_data(ttl=300)
 def fetch_all_heritage():
-    res = get_supabase().table("heritage").select(
-        "id,name_en,name_ja,category,states_name_en,date_inscribed,region_en,danger"
-    ).limit(1200).execute()
-    return res.data or []
+    df = load_heritage_df()
+    cols = ["id", "name_en", "name_ja", "category", "states_name_en", "date_inscribed", "region_en", "danger"]
+    return df[[c for c in cols if c in df.columns]].fillna("").to_dict("records")
 
-@st.cache_data(ttl=300)
 def fetch_heritage_total_count():
-    return get_supabase().table("heritage").select("id", count="exact").execute().count or 0
+    return len(load_heritage_df())
 
-@st.cache_data(ttl=300)
 def fetch_heritage_list(region, category, kw):
-    q = get_supabase().table("heritage").select(
-        "id,name_en,name_ja,category,states_name_en,region_en,date_inscribed,danger,criteria_txt"
-    ).order("date_inscribed")
+    df = load_heritage_df().copy()
     if region:
-        q = q.eq("region_en", region)
+        df = df[df["region_en"] == region]
     if category:
-        q = q.eq("category", category)
+        df = df[df["category"] == category]
     if kw:
-        q = q.or_(f"name_ja.ilike.%{kw}%,name_en.ilike.%{kw}%,states_name_en.ilike.%{kw}%")
-    return q.limit(200).execute().data
+        mask = (
+            df["name_ja"].fillna("").str.contains(kw, case=False) |
+            df["name_en"].fillna("").str.contains(kw, case=False) |
+            df["states_name_en"].fillna("").str.contains(kw, case=False)
+        )
+        df = df[mask]
+    df = df.sort_values("date_inscribed")
+    cols = ["id", "name_en", "name_ja", "category", "states_name_en", "region_en", "date_inscribed", "danger", "criteria_txt"]
+    return df[[c for c in cols if c in df.columns]].head(200).fillna("").to_dict("records")
 
-@st.cache_data(ttl=300)
 def fetch_heritage_detail(hid):
-    return get_supabase().table("heritage").select("*").eq("id", hid).single().execute().data
+    df = load_heritage_df()
+    row = df[df["id"] == hid]
+    if row.empty:
+        return {}
+    return row.iloc[0].where(pd.notna(row.iloc[0]), other="").to_dict()
 
 # ─── セッション ───────────────────────────────────────────────────
 def init_session():
     defaults = {
-        "user": None, "tab": "home", "selected_id": None,
+        "tab": "home", "selected_id": None,
         "detail_from": "list", "show_search": False, "search_kw": "",
         "quiz_data": None, "quiz_answered": False, "quiz_correct": False,
         "quiz_score": 0, "quiz_count": 0, "quiz_selected_idx": -1,
@@ -685,56 +691,19 @@ def page_detail():
         )
 
     if h.get("latitude") and h.get("longitude"):
-        import pandas as pd
         st.map(pd.DataFrame([{"lat": float(h["latitude"]), "lon": float(h["longitude"])}]), zoom=4)
-
-    st.divider()
-    if st.session_state.user:
-        uid   = st.session_state.user.id
-        fav   = supabase.table("favorites").select("id").eq("heritage_id", hid).eq("user_id", uid).execute()
-        is_fav = len(fav.data) > 0
-        if st.button("❤️ お気に入り解除" if is_fav else "🤍 お気に入りに追加", use_container_width=True):
-            if is_fav:
-                supabase.table("favorites").delete().eq("heritage_id", hid).eq("user_id", uid).execute()
-            else:
-                supabase.table("favorites").insert({"heritage_id": hid, "user_id": uid}).execute()
-            st.rerun()
-    else:
-        st.info("お気に入り登録はログイン後に利用できます")
-
-    st.markdown(f'<div class="sec-row"><span class="sec-title">💬 コメント</span></div>', unsafe_allow_html=True)
-    comments = supabase.table("comments").select("*").eq("heritage_id", hid).order("created_at").execute().data
-    if comments:
-        for c in comments:
-            with st.chat_message("user"):
-                st.markdown(f"**{c.get('user_email','匿名')}** {c.get('created_at','')[:10]}")
-                st.write(c["body"])
-    else:
-        st.caption("まだコメントはありません")
-
-    if st.session_state.user:
-        with st.form("comment_form", clear_on_submit=True):
-            body = st.text_area("コメントを書く", placeholder="この世界遺産について…")
-            if st.form_submit_button("投稿") and body.strip():
-                supabase.table("comments").insert({
-                    "heritage_id": hid,
-                    "user_id":     st.session_state.user.id,
-                    "user_email":  st.session_state.user.email,
-                    "body":        body.strip(),
-                }).execute()
-                st.rerun()
-    else:
-        st.info("コメント投稿はログイン後に利用できます")
 
 # ─── クイズ ──────────────────────────────────────────────────────
 def page_quiz():
     screen_header("Quiz", f'<div class="h-icon">{BELL_SVG}</div>')
 
     def new_question():
-        res  = supabase.table("heritage").select(
-            "id,name_en,name_ja,states_name_en,category,region_en,date_inscribed"
-        ).limit(500).execute()
-        pool = [h for h in res.data if h.get("name_ja") and h.get("states_name_en")]
+        df = load_heritage_df()
+        cols = ["id", "name_en", "name_ja", "states_name_en", "category", "region_en", "date_inscribed"]
+        pool = df[
+            df["name_ja"].notna() & (df["name_ja"] != "") &
+            df["states_name_en"].notna() & (df["states_name_en"] != "")
+        ][[c for c in cols if c in df.columns]].fillna("").to_dict("records")
         if len(pool) < 4:
             return
         correct = random.choice(pool)
@@ -812,79 +781,44 @@ def page_quiz():
             st.session_state.quiz_selected_idx = -1
             st.rerun()
 
-# ─── プロフィール ────────────────────────────────────────────────
-def page_profile():
-    screen_header("Profile", f'<div class="h-icon">{BELL_SVG}</div>')
+# ─── スタッツ ───────────────────────────────────────────────────
+def page_stats():
+    screen_header("Stats", f'<div class="h-icon">{BELL_SVG}</div>')
 
-    if st.session_state.user:
-        email      = st.session_state.user.email
-        score      = st.session_state.quiz_score
-        level      = max(1, score // 5 + 1)
-        level_name = ["Beginner", "Explorer", "Traveler", "Expert", "Master"][min(level - 1, 4)]
-        st.markdown(
-            f'<div style="background:linear-gradient(135deg,{C_ACTIVE},{C_DARK});border-radius:20px;padding:24px;'
-            f'margin-bottom:14px;text-align:center;color:white;box-shadow:0 4px 20px rgba(0,58,154,0.28)">'
-            f'<div style="font-size:48px;margin-bottom:8px">👤</div>'
-            f'<div style="font-size:15px;font-weight:700;margin-bottom:4px">{email}</div>'
-            f'<div style="font-size:11px;opacity:0.75">{level_name} · Lv.{level} · {score} XP</div></div>',
-            unsafe_allow_html=True,
-        )
-        if st.button("ログアウト", use_container_width=True):
-            supabase.auth.sign_out()
-            st.session_state.user = None
-            st.rerun()
+    score      = st.session_state.quiz_score
+    count      = st.session_state.quiz_count
+    level      = max(1, score // 5 + 1)
+    level_name = ["Beginner", "Explorer", "Traveler", "Expert", "Master"][min(level - 1, 4)]
+    fill_pct   = (score % 5) * 20
 
-        st.markdown('<div class="sec-row"><span class="sec-title">❤️ お気に入り</span></div>', unsafe_allow_html=True)
-        favs = supabase.table("favorites").select("heritage_id").eq("user_id", st.session_state.user.id).execute().data
-        if favs:
-            ids   = [f["heritage_id"] for f in favs]
-            hlist = supabase.table("heritage").select("id,name_en,name_ja,category,states_name_en").in_("id", ids).execute().data
-            for h in hlist:
-                cat  = h.get("category", "Cultural")
-                grad = CAT_GRAD.get(cat, f"linear-gradient(135deg,{C_ACTIVE},{C_DARK})")
-                em   = CAT_ICON.get(cat, "🌍")
-                st.markdown(
-                    f'<div class="hcard">'
-                    f'<div class="hthumb" style="background:{grad}">{em}</div>'
-                    f'<div><div class="hcard-title">{disp(h)}</div>'
-                    f'<div class="hcard-loc">📍 {h.get("states_name_en","")}</div></div></div>',
-                    unsafe_allow_html=True,
-                )
-                if st.button("詳細", key=f"fav_{h['id']}"):
-                    st.session_state.selected_id = h["id"]
-                    st.session_state.detail_from = "profile"
-                    st.session_state.tab = "detail"
-                    st.rerun()
-        else:
-            st.caption("お気に入りはまだありません")
-    else:
-        st.markdown(
-            f'<div style="background:{C_ICON_BG};border-radius:20px;padding:24px;text-align:center;margin-bottom:16px">'
-            f'<div style="font-size:48px">🌍</div>'
-            f'<div style="font-size:15px;font-weight:700;color:{C_TEXT};margin-top:8px">ログインして記録を保存</div>'
-            f'<div style="font-size:12px;color:{C_SUB};margin-top:4px">お気に入り・コメント機能が使えます</div></div>',
-            unsafe_allow_html=True,
-        )
-        tab_in, tab_up = st.tabs(["ログイン", "新規登録"])
-        with tab_in:
-            email_in = st.text_input("メールアドレス", key="li_email")
-            pw_in    = st.text_input("パスワード", type="password", key="li_pw")
-            if st.button("ログイン", use_container_width=True, type="primary", key="login_btn"):
-                try:
-                    res = supabase.auth.sign_in_with_password({"email": email_in, "password": pw_in})
-                    st.session_state.user = res.user
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"ログイン失敗: {e}")
-        with tab_up:
-            email_up = st.text_input("メールアドレス", key="su_email")
-            pw_up    = st.text_input("パスワード（6文字以上）", type="password", key="su_pw")
-            if st.button("新規登録", use_container_width=True, type="primary", key="signup_btn"):
-                try:
-                    supabase.auth.sign_up({"email": email_up, "password": pw_up})
-                    st.info("確認メールを送りました。メールのリンクをクリックしてください。")
-                except Exception as e:
-                    st.error(f"登録失敗: {e}")
+    st.markdown(
+        f'<div style="background:linear-gradient(135deg,{C_ACTIVE},{C_DARK});border-radius:20px;padding:24px;'
+        f'margin-bottom:14px;text-align:center;color:white;box-shadow:0 4px 20px rgba(0,58,154,0.28)">'
+        f'<div style="font-size:48px;margin-bottom:8px">🏛️</div>'
+        f'<div style="font-size:22px;font-weight:800;margin-bottom:4px">{level_name}</div>'
+        f'<div style="font-size:13px;opacity:0.8">Lv.{level} · {score} XP</div></div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div class="lvl-card">'
+        f'<div class="lvl-icon">⭐</div>'
+        f'<div style="flex:1"><div class="lvl-name">クイズ正解率</div>'
+        f'<div class="lvl-track"><div class="lvl-fill" style="width:{int(score/max(count,1)*100)}%"></div></div></div>'
+        f'<div class="lvl-badge">{score}/{max(count,1)}</div></div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div class="lvl-card">'
+        f'<div class="lvl-icon">🎯</div>'
+        f'<div style="flex:1"><div class="lvl-name">次のレベルまで</div>'
+        f'<div class="lvl-track"><div class="lvl-fill" style="width:{fill_pct}%"></div></div></div>'
+        f'<div class="lvl-badge">{5 - score % 5} 問</div></div>',
+        unsafe_allow_html=True,
+    )
+    if st.button("スコアをリセット", use_container_width=True):
+        st.session_state.quiz_score = 0
+        st.session_state.quiz_count = 0
+        st.rerun()
 
 # ─── ボトムナビ（HTML nav + 透明ボタンオーバーレイ） ────────────────
 def bottom_nav():
@@ -910,10 +844,9 @@ def bottom_nav():
         else:
             return (f'<svg viewBox="0 0 24 24" width="22" height="22" fill="none"'
                     f' stroke="{color}" stroke-width="1.8">'
-                    f'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>'
-                    f'<circle cx="12" cy="7" r="4"/></svg>')
+                    f'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>')
 
-    tabs = [("home", "Home"), ("list", "Sites"), ("quiz", "Quiz"), ("profile", "Profile")]
+    tabs = [("home", "Home"), ("list", "Sites"), ("quiz", "Quiz"), ("stats", "Stats")]
     nav_items = ""
     for tab_key, label in tabs:
         active = (current == tab_key) or (tab_key == "list" and is_list)
@@ -945,7 +878,7 @@ elif tab == "list":
     page_list()
 elif tab == "quiz":
     page_quiz()
-elif tab == "profile":
-    page_profile()
+elif tab == "stats":
+    page_stats()
 
 bottom_nav()

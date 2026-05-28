@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>World Heritage App – UI Design</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+      background: #E4EBF2;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      gap: 20px;
+    }
+
+    .app-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #8AA0B8;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .phones-row {
+      display: flex;
+      gap: 28px;
+      align-items: center;
+    }
+
+    /* ── Phone Shell ── */
+    .phone {
+      width: 300px;
+      height: 640px;
+      background: #F7FAFD;
+      border-radius: 40px;
+      box-shadow:
+        0 28px 70px rgba(0, 50, 130, 0.16),
+        0 4px 16px rgba(0, 0, 0, 0.06);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Status Bar ── */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 22px 0;
+      font-size: 11px;
+      font-weight: 700;
+      color: #1A2940;
+    }
+    .s-right { display: flex; gap: 5px; align-items: center; }
+    .s-dot   { width: 4px; height: 4px; border-radius: 50%; background: #1A2940; }
+    .s-batt  {
+      width: 18px; height: 9px;
+      border: 1.5px solid #1A2940; border-radius: 2px;
+      position: relative;
+    }
+    .s-batt::after {
+      content: '';
+      position: absolute; right: -4px; top: 50%;
+      transform: translateY(-50%);
+      width: 2px; height: 5px;
+      background: #1A2940; border-radius: 0 1px 1px 0;
+    }
+    .s-batt-fill { width: 78%; height: 100%; background: #1A2940; border-radius: 1px; }
+
+    /* ── Screen Header ── */
+    .screen-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px 8px;
+    }
+    .screen-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #0D1E35;
+      letter-spacing: -0.3px;
+    }
+    .h-icons { display: flex; gap: 8px; }
+    .h-icon {
+      width: 34px; height: 34px;
+      background: #EAF2F9;
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .h-icon svg { width: 15px; height: 15px; }
+
+    /* ── Scroll Content ── */
+    .scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 6px;
+    }
+    .scroll::-webkit-scrollbar { display: none; }
+
+    /* ── Bottom Nav ── */
+    .bnav {
+      height: 68px;
+      background: #fff;
+      border-top: 1px solid #EDF2F8;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 4px 10px;
+      flex-shrink: 0;
+    }
+    .n-item {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 2px;
+      font-size: 9px; font-weight: 700;
+      color: #B0C0CF;
+    }
+    .n-item.on { color: #0096D6; }
+    .n-item svg { width: 20px; height: 20px; }
+
+    /* ── Shared Utilities ── */
+    .section-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 20px; margin-bottom: 9px;
+    }
+    .s-title { font-size: 14px; font-weight: 800; color: #0D1E35; }
+    .s-link  { font-size: 11px; font-weight: 600; color: #0096D6; }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin: 0 20px 10px;
+      padding: 5px 13px;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 1px 6px rgba(0,50,130,0.09);
+      font-size: 11px; font-weight: 700; color: #0D1E35;
+    }
+    .chip-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: linear-gradient(135deg, #0096D6, #003DA5);
+    }
+
+    /* ═══════════════════════════════
+       HOME
+    ═══════════════════════════════ */
+
+    .region-card {
+      margin: 0 20px 13px;
+      padding: 10px 14px;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 2px 10px rgba(0,50,130,0.07);
+      display: flex; align-items: center; gap: 11px;
+    }
+    .r-flag {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, #0096D6, #003DA5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px;
+    }
+    .r-label { font-size: 10px; color: #A8BBCC; font-weight: 500; }
+    .r-name  { font-size: 13px; font-weight: 700; color: #0D1E35; }
+    .r-caret { margin-left: auto; font-size: 14px; color: #C0D0DE; }
+
+    .daily-card {
+      margin: 0 20px 13px;
+      padding: 14px 16px;
+      background: #EAF5FC;
+      border-radius: 20px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .circ-wrap {
+      position: relative; width: 60px; height: 60px; flex-shrink: 0;
+    }
+    .circ-wrap svg { transform: rotate(-90deg); }
+    .c-bg { fill: none; stroke: #C8E8F6; stroke-width: 4; }
+    .c-fg {
+      fill: none; stroke: #0096D6; stroke-width: 4;
+      stroke-linecap: round;
+      stroke-dasharray: 144;
+      stroke-dashoffset: 29; /* 80% */
+    }
+    .circ-label {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; color: #0096D6;
+    }
+    .task-sup { font-size: 10px; font-weight: 600; color: #5DB5D8; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; }
+    .task-txt { font-size: 13px; font-weight: 700; color: #0D1E35; line-height: 1.4; }
+
+    .xp-card {
+      margin: 0 20px 13px;
+      padding: 14px 16px;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 2px 12px rgba(0,50,130,0.07);
+    }
+    .xp-sub { font-size: 11px; color: #A8BBCC; margin-bottom: 10px; }
+    .xp-sub b { color: #0096D6; font-size: 13px; }
+    .bars { display: flex; align-items: flex-end; gap: 5px; height: 46px; }
+    .bar { flex: 1; border-radius: 4px 4px 0 0; }
+    .bar.on  { background: linear-gradient(180deg, #0096D6 0%, #003DA5 100%); }
+    .bar.off { background: #D8EDF8; }
+    .days { display: flex; gap: 5px; margin-top: 5px; }
+    .day { flex: 1; text-align: center; font-size: 8px; font-weight: 600; color: #B8C8D8; }
+    .day.on { color: #0096D6; }
+
+    .lvl-card {
+      margin: 0 20px 13px;
+      padding: 12px 14px;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 2px 12px rgba(0,50,130,0.07);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .lvl-icon {
+      width: 42px; height: 42px; border-radius: 14px;
+      background: linear-gradient(135deg, #0096D6, #003DA5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    .lvl-name { font-size: 13px; font-weight: 700; color: #0D1E35; margin-bottom: 5px; }
+    .lvl-track { height: 5px; background: #D8EDF8; border-radius: 3px; }
+    .lvl-fill  { height: 100%; width: 62%; background: linear-gradient(90deg, #0096D6, #00C4E8); border-radius: 3px; }
+    .lvl-badge { margin-left: auto; padding: 4px 11px; background: #EAF5FC; color: #0096D6; font-size: 10px; font-weight: 700; border-radius: 20px; }
+
+    /* ═══════════════════════════════
+       SITES
+    ═══════════════════════════════ */
+
+    .grid2 {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; padding: 0 20px 12px;
+    }
+    .gc {
+      height: 96px; border-radius: 18px;
+      overflow: hidden; position: relative;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .gc .em { font-size: 34px; }
+    .gc-lbl {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 7px 10px;
+      background: linear-gradient(transparent, rgba(0,18,56,.65));
+      font-size: 10px; font-weight: 700; color: #fff; line-height: 1.3;
+    }
+    .gb1 { background: linear-gradient(135deg, #A8DAEF, #5BB6E8); }
+    .gb2 { background: linear-gradient(135deg, #72C2F0, #0096D6); }
+    .gb3 { background: linear-gradient(135deg, #4C6FA8, #003DA5); }
+    .gb4 { background: linear-gradient(135deg, #3DBAC8, #009AA8); }
+
+    .curated { font-size: 13px; font-weight: 800; color: #0D1E35; padding: 0 20px 9px; }
+
+    .hcard {
+      margin: 0 20px 10px;
+      background: #fff;
+      border-radius: 18px;
+      padding: 10px 12px;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 2px 10px rgba(0,50,130,0.07);
+    }
+    .hthumb {
+      width: 66px; height: 66px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; flex-shrink: 0;
+    }
+    .ht1 { background: linear-gradient(135deg, #A8DAEF, #5BB6E8); }
+    .ht2 { background: linear-gradient(135deg, #4C6FA8, #003DA5); }
+    .hcard-title    { font-size: 12px; font-weight: 700; color: #0D1E35; margin-bottom: 2px; }
+    .hcard-loc      { font-size: 10px; color: #A8BBCC; margin-bottom: 5px; }
+    .hcard-tags     { display: flex; gap: 4px; margin-bottom: 4px; }
+    .htag           { font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 20px; background: #EAF5FC; color: #0096D6; }
+    .hcard-meta     { display: flex; align-items: center; gap: 5px; }
+    .mini-av        { width: 18px; height: 18px; border-radius: 50%; background: linear-gradient(135deg,#0096D6,#003DA5); display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700; }
+    .meta-txt       { font-size: 10px; color: #A8BBCC; }
+
+    /* ═══════════════════════════════
+       AUDIO GUIDE
+    ═══════════════════════════════ */
+
+    .tabs { display: flex; gap: 22px; padding: 0 20px 10px; }
+    .tab  { font-size: 12px; font-weight: 700; color: #B0C0CF; padding-bottom: 6px; }
+    .tab.on { color: #0096D6; border-bottom: 2px solid #0096D6; }
+
+    .lcard {
+      margin: 0 20px 10px;
+      background: #fff;
+      border-radius: 18px;
+      padding: 10px 12px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 2px 10px rgba(0,50,130,0.07);
+    }
+    .lthumb {
+      width: 50px; height: 50px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .lt1 { background: linear-gradient(135deg, #0096D6, #003DA5); }
+    .lt2 { background: linear-gradient(135deg, #00C4E8, #0096D6); }
+    .lt3 { background: linear-gradient(135deg, #003DA5, #006BB4); }
+    .lt4 { background: linear-gradient(135deg, #1A6CA8, #0096D6); }
+    .lt5 { background: linear-gradient(135deg, #003DA5, #00C4E8); }
+    .linfo { flex: 1; }
+    .l-title { font-size: 12px; font-weight: 700; color: #0D1E35; margin-bottom: 2px; }
+    .l-site  { font-size: 10px; color: #A8BBCC; }
+    .l-meta  { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+    .l-dur   { font-size: 10px; color: #B8C8D8; }
+    .l-badge { font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 20px; background: #EAF5FC; color: #0096D6; }
+    .play {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: #EAF5FC;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .play svg { width: 12px; height: 12px; }
+
+    @media (max-width: 1060px) {
+      .phones-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <p class="app-label">World Heritage App — UI Concept</p>
+
+  <div class="phones-row">
+
+    <!-- ════════════ PHONE 1 · HOME ════════════ -->
+    <div class="phone">
+
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="s-right">
+          <div class="s-dot"></div><div class="s-dot"></div><div class="s-dot"></div>
+          <div class="s-batt"><div class="s-batt-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="screen-header">
+        <span class="screen-title">Home</span>
+        <div class="h-icons">
+          <div class="h-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#5C7A98" stroke-width="2" stroke-linecap="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="scroll">
+
+        <!-- Region Selector -->
+        <div class="region-card">
+          <div class="r-flag">🌏</div>
+          <div>
+            <div class="r-label">Exploring</div>
+            <div class="r-name">Asia Pacific ▾</div>
+          </div>
+          <div class="r-caret">›</div>
+        </div>
+
+        <!-- Daily Task -->
+        <div class="daily-card">
+          <div class="circ-wrap">
+            <svg width="60" height="60" viewBox="0 0 60 60">
+              <circle class="c-bg" cx="30" cy="30" r="23"/>
+              <circle class="c-fg" cx="30" cy="30" r="23"/>
+            </svg>
+            <div class="circ-label">80%</div>
+          </div>
+          <div>
+            <div class="task-sup">Daily Task</div>
+            <div class="task-txt">Learn 5 World<br>Heritage sites</div>
+          </div>
+        </div>
+
+        <!-- XP Earned -->
+        <div class="section-row">
+          <span class="s-title">XP Earned</span>
+          <span class="s-link">XP Earned ›</span>
+        </div>
+        <div class="xp-card">
+          <div class="xp-sub">Total <b>584 XP</b></div>
+          <div class="bars">
+            <div class="bar on"  style="height:24px"></div>
+            <div class="bar on"  style="height:34px"></div>
+            <div class="bar on"  style="height:44px"></div>
+            <div class="bar on"  style="height:46px"></div>
+            <div class="bar on"  style="height:32px"></div>
+            <div class="bar off" style="height:18px"></div>
+            <div class="bar off" style="height:10px"></div>
+          </div>
+          <div class="days">
+            <span class="day on">M</span><span class="day on">T</span>
+            <span class="day on">W</span><span class="day on">T</span>
+            <span class="day on">F</span><span class="day">S</span>
+            <span class="day">S</span>
+          </div>
+        </div>
+
+        <!-- Heritage Level -->
+        <div class="section-row"><span class="s-title">Heritage Level</span></div>
+        <div class="lvl-card">
+          <div class="lvl-icon">🏛️</div>
+          <div style="flex:1">
+            <div class="lvl-name">Explorer · Lv.4</div>
+            <div class="lvl-track"><div class="lvl-fill"></div></div>
+          </div>
+          <div class="lvl-badge">62 XP</div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Nav -->
+      <div class="bnav">
+        <div class="n-item on">
+          <svg viewBox="0 0 24 24" fill="#0096D6"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          Home
+        </div>
+        <div class="n-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#B0C0CF" stroke-width="1.8">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          Sites
+        </div>
+        <div class="n-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#B0C0CF" stroke-width="1.8">
+            <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+          </svg>
+          Audio
+        </div>
+        <div class="n-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#B0C0CF" stroke-width="1.8">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          Saved
+        </div>
+        <div class="n-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#B0C0CF" stroke-width="1.8">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          Profile
+        </div>
+      </div>
+
+    </div>
+    <!-- /PHONE 1 -->
+
+
+    <!-- ════════════ PHONE 2 · SITES ════════════ -->
+    <div class="phone">
+
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="s-right">
+          <div class="s-dot"></div><div class="s-dot"></div><div class="s-dot"></div>
+          <div class="s-batt"><div class="s-batt-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="screen-header">
+        <span class="screen-title">Sites</span>
+        <div class="h-icons">
+          <div class="h-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#5C7A98" stroke-width="2" stroke-linecap="round">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+          </div>
+          <div class="h-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#5C7A98" stroke-width="2" stroke-linecap="round">
+              <line x1="4" y1="6" x2="20" y2="6"/>
+              <line x1="8" y1="12" x2="20" y2="12"/>
+              <line x1="12" y1="18" x2="20" y2="18"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="scroll">
+
+        <div class="chip">
+          <div class="chip-dot"></div>
+          World Heritage · 1,199 Sites
+        </div>
+
+        <!-- Region Grid -->
+        <div class="grid2">
+          <div class="gc gb1"><span class="em">🏯</span><div class="gc-lbl">Asia Pacific</div></div>
+          <div class="gc gb2"><span class="em">🗼</span><div class="gc-lbl">Europe &amp; N. America</div></div>
+          <div class="gc gb3"><span class="em">🏛️</span><div class="gc-lbl">Arab States</div></div>
+          <div class="gc gb4"><span class="em">🌿</span><div class="gc-lbl">Africa</div></div>
+        </div>
+
+        <div class="curated">Curated for you</div>
+
+        <!-- Horizontal Site Cards -->
+        <div class="hcard">
+          <div class="hthumb ht1">🗾</div>
+          <div>
+            <div class="hcard-title">Historic Monuments of Ancient Kyoto</div>
+            <div class="hcard-loc">📍 Japan · Cultural</div>
+            <div class="hcard-tags">
+              <span class="htag">UNESCO</span>
+              <span class="htag">1994</span>
+            </div>
+            <div class="hcard-meta">
+              <div class="mini-av">文</div>
+              <span class="meta-txt">12 lessons · 45 min</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hcard">
+          <div class="hthumb ht2">🏔️</div>
+          <div>
+            <div class="hcard-title">Sagarmatha National Park</div>
+            <div class="hcard-loc">📍 Nepal · Natural</div>
+            <div class="hcard-tags">
+              <span class="htag">UNESCO</span>
+              <span class="htag">1979</span>
+            </div>
+            <div class="hcard-meta">
+              <div class="mini-av">山</div>
+              <span class="meta-txt">8 lessons · 30 min</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Nav -->
+      <div class="bnav">
+        <div class="n-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#B0C0CF" stroke-width="1.8">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          Home
+        </div>
+        <div class="n-item on">
+          <svg viewBox="0 0 24 24" fill="#0096D6"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          Sites
+        </div>
+        <div class="n-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#B0C0CF" stroke-width="1.8">
+            <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+          </svg>
+          Audio
+        </div>
+        <div class="n-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#B0C0CF" stroke-width="1.8">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          Saved
+        </div>
+        <div class="n-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#B0C0CF" stroke-width="1.8">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          Profile
+        </div>
+      </div>
+
+    </div>
+    <!-- /PHONE 2 -->
+
+
+    <!-- ════════════ PHONE 3 · AUDIO GUIDE ════════════ -->
+    <div class="phone">
+
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="s-right">
+          <div class="s-dot"></div><div class="s-dot"></div><div class="s-dot"></div>
+          <div class="s-batt"><div class="s-batt-fill"></div></div>
+        </div>
+      </div>
+
+      <div class="screen-header">
+        <span class="screen-title">Audio Guide</span>
+        <div class="h-icons">
+          <div class="h-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#5C7A98" stroke-width="2" stroke-linecap="round">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+          </div>
+          <div class="h-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#5C7A98" stroke-width="2" stroke-linecap="round">
+              <line x1="4" y1="6" x2="20" y2="6"/>
+              <line x1="8" y1="12" x2="20" y2="12"/>
+              <line x1="12" y1="18" x2="20" y2="18"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="scroll">
+
+        <div class="chip">
+          <div class="chip-dot"></div>
+          Asia Pacific
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="tabs">
+          <span class="tab on">All Audio</span>
+          <span class="tab">Downloaded</span>
+        </div>
+
+        <!-- Lesson List -->
+        <div class="lcard">
+          <div class="lthumb lt1">🏯</div>
+          <div class="linfo">
+            <div class="l-title">Design with Gate L.</div>
+            <div class="l-site">Himeji Castle, Japan</div>
+            <div class="l-meta">
+              <span class="l-dur">● 18:42</span>
+              <span class="l-badge">Cultural</span>
+            </div>
+          </div>
+          <div class="play">
+            <svg viewBox="0 0 24 24" fill="#0096D6"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </div>
+        </div>
+
+        <div class="lcard">
+          <div class="lthumb lt2">🌊</div>
+          <div class="linfo">
+            <div class="l-title">UI / UX Design</div>
+            <div class="l-site">Ha Long Bay, Vietnam</div>
+            <div class="l-meta">
+              <span class="l-dur">● 22:10</span>
+              <span class="l-badge">Natural</span>
+            </div>
+          </div>
+          <div class="play">
+            <svg viewBox="0 0 24 24" fill="#0096D6"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </div>
+        </div>
+
+        <div class="lcard">
+          <div class="lthumb lt3">🏔️</div>
+          <div class="linfo">
+            <div class="l-title">New World</div>
+            <div class="l-site">Sagarmatha N.P., Nepal</div>
+            <div class="l-meta">
+              <span class="l-dur">● 15:30</span>
+              <span class="l-badge">Natural</span>
+            </div>
+          </div>
+          <div class="play">
+            <svg viewBox="0 0 24 24" fill="#0096D6"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </div>
+        </div>
+
+        <div class="lcard">
+          <div class="lthumb lt4">🚢</div>
+          <div class="linfo">
+            <div class="l-title">Travel Arrangements</div>
+            <div class="l-site">Macao Historic Centre</div>
+            <div class="l-meta">
+              <span class="l-dur">● 11:05</span>
+              <span class="l-badge">Cultural</span>
+            </div>
+          </div>
+          <div class="play">
+            <svg viewBox="0 0 24 24" fill="#0096D6"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </div>
+        </div>
+
+        <div class="lcard">
+          <div class="lthumb lt5">🌸</div>
+          <div class="linfo">
+            <div class="l-title">Fashion Week 2021</div>
+            <div class="l-site">Nara, Japan · Temples</div>
+            <div class="l-meta">
+              <span class="l-dur">● 09:18</span>
+              <span class="l-badge">Cultural</span>
+            </div>
+          </div>
+          <div class="play">
+            <svg viewBox="0 0 24 24" fill="#0096D6"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Nav -->
+      <div class="bnav">
+        <div class="n-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#B0C0CF" stroke-width="1.8">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          Home
+        </div>
+        <div class="n-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#B0C0CF" stroke-width="1.8">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+          Sites
+        </div>
+        <div class="n-item on">
+          <svg viewBox="0 0 24 24" fill="#0096D6"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+          Audio
+        </div>
+        <div class="n-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#B0C0CF" stroke-width="1.8">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          Saved
+        </div>
+        <div class="n-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#B0C0CF" stroke-width="1.8">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          Profile
+        </div>
+      </div>
+
+    </div>
+    <!-- /PHONE 3 -->
+
+  </div>
+
+</body>
+</html>
