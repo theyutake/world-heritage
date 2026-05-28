@@ -270,44 +270,53 @@ def inject_css():
     /* ── タブ ── */
     div[data-testid="stTabs"] button[role="tab"] {{ color: {C_TEXT} !important; }}
     div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{ color: {C_ACTIVE} !important; }}
-    /* ── Bottom nav (st.bottom内部) ── */
+    /* ── Bottom nav：視覚層（position:fixed） ── */
+    .bnav {{
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        height: 68px;
+        background: #fff;
+        border-top: 1px solid #EDF2F8;
+        box-shadow: 0 -2px 16px rgba(0,50,130,0.08);
+        display: flex; align-items: center; justify-content: space-around;
+        padding: 0 4px 8px;
+        z-index: 999;
+        max-width: 480px; margin: 0 auto;
+    }}
+    .n-item {{
+        display: flex; flex-direction: column; align-items: center; gap: 3px;
+        font-size: 9px; font-weight: 700; color: {C_INACTIVE};
+        flex: 1;
+    }}
+    .n-item.on {{ color: {C_ACTIVE}; }}
+    .n-item svg {{ stroke: {C_INACTIVE}; }}
+    .n-item.on svg {{ stroke: {C_ACTIVE}; }}
+    /* ── Bottom nav：クリック層（st.bottom = 完全透明） ── */
     [data-testid="stBottom"] {{
-        background: #fff !important;
-        border-top: 1px solid #EDF2F8 !important;
-        box-shadow: 0 -2px 16px rgba(0,50,130,0.08) !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
     }}
     [data-testid="stBottom"] > div {{
         padding: 0 !important;
+        height: 68px !important;
         max-width: 480px !important;
         margin: 0 auto !important;
     }}
-    /* bnav-inner: 見た目のナビバー */
-    .bnav-inner {{
-        display: flex; align-items: flex-start; justify-content: space-around;
-        padding-top: 8px; height: 62px;
+    [data-testid="stBottom"] [data-testid="stHorizontalBlock"],
+    [data-testid="stBottom"] [data-testid="stColumn"] {{
+        padding: 0 !important; gap: 0 !important; height: 68px !important;
     }}
-    .nav-item {{
-        display: flex; flex-direction: column; align-items: center; gap: 3px;
-        font-size: 9px; font-weight: 700; color: {C_INACTIVE};
-        min-width: 56px; flex: 1;
+    [data-testid="stBottom"] .element-container,
+    [data-testid="stBottom"] [data-testid="stButton"] {{
+        height: 68px !important; margin: 0 !important; padding: 0 !important;
     }}
-    .nav-item.on {{ color: {C_ACTIVE}; }}
-    .nav-item svg {{ stroke: {C_INACTIVE}; }}
-    .nav-item.on svg {{ stroke: {C_ACTIVE}; }}
-    /* stBottom内のst.columns（stHorizontalBlock）を直接ターゲット */
-    [data-testid="stBottom"] [data-testid="stHorizontalBlock"] {{
-        margin-top: -62px !important;
-        position: relative; z-index: 10;
-        height: 62px !important;
-    }}
-    /* 透明ボタンオーバーレイ */
     [data-testid="stBottom"] [data-testid="stButton"] button {{
         opacity: 0 !important;
-        height: 62px !important; width: 100% !important;
-        cursor: pointer !important;
-        border: none !important; background: transparent !important;
-        padding: 0 !important; box-shadow: none !important;
-        border-radius: 0 !important;
+        height: 68px !important; width: 100% !important;
+        background: transparent !important; border: none !important;
+        box-shadow: none !important; cursor: pointer !important;
+        padding: 0 !important; border-radius: 0 !important;
     }}
     /* ── Overlay buttons on cards ── */
     div.element-container:has(div.region-card) {{ margin-bottom: 0 !important; }}
@@ -843,20 +852,16 @@ def bottom_nav():
                     f'<line x1="12" y1="20" x2="12" y2="4"/>'
                     f'<line x1="6" y1="20" x2="6" y2="14"/></svg>')
 
-    # 見た目ナビ（1つのmarkdownで全4タブ）
+    # 視覚ナビバー（メインフロー・position:fixed）
     nav_items_html = ""
     for tab_key, label in tabs:
         active = current == tab_key or (tab_key == "list" and current == "detail")
         cls = "on" if active else ""
-        nav_items_html += (
-            f'<div class="nav-item {cls}">{nav_svg(tab_key)}'
-            f'<span>{label}</span></div>'
-        )
+        nav_items_html += f'<div class="n-item {cls}">{nav_svg(tab_key)}<span>{label}</span></div>'
+    st.markdown(f'<div class="bnav">{nav_items_html}</div>', unsafe_allow_html=True)
 
-    nav_ctx = st.bottom if hasattr(st, "bottom") else st.container()
-    with nav_ctx:
-        st.markdown(f'<div class="bnav-inner">{nav_items_html}</div>', unsafe_allow_html=True)
-        # 透明ボタン行（st.columnsが bnav-inner の直後に来る）
+    # クリック層（st.bottom = Streamlitがfixed配置・透明ボタンのみ）
+    with st.bottom():
         cols = st.columns(4)
         for col, (tab_key, label) in zip(cols, tabs):
             with col:
